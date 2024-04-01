@@ -14,6 +14,9 @@ const createCard = (board, text) => {
   deleteBox.classList.add("delete-box"); // добавляем класс.
   content.classList.add("item-content"); // добавляем класс
 
+  let id = newID(); // ищем новый id
+  card.id = id; // присваеваемый карточке новый id
+
   const cardsList = board.querySelector(".cards-list"); // ищем список с карточками в доске
 
   if (!cardsList) {
@@ -59,6 +62,7 @@ const createCard = (board, text) => {
   });
 
   card.addEventListener("dragstart", (e) => {
+    e.dataTransfer.setData("id", e.target.id); // сохраняем id элемента
     e.target.classList.add("selected"); // добавим класс
   });
 
@@ -67,8 +71,6 @@ const createCard = (board, text) => {
   });
 
   card.addEventListener("dragover", (e) => {
-    let nullEl = document.querySelector(".nothing");
-    if (nullEl) nullEl.remove();
     e.preventDefault(); // удаляем дейсвтия по умолчанию
     const slctCard = document.querySelector(".selected"); // выбранные элемент
     let dragoverElement = e.target; // элемент на котором произошел dragover
@@ -77,14 +79,28 @@ const createCard = (board, text) => {
       slctCard !== dragoverElement &&
       dragoverElement.classList.contains("board-item"); // проверяем если выбранная карта совпадает с элементом на котором прозошел over или у этого элемента нет класса board-item
 
-    if (!isMoveable) return;
+    if (!isMoveable) {
+      return;
+    }
 
     let nextElement = getNextElement(e.clientY, dragoverElement); //получим элемент
 
     let listCards = document.querySelector(".cards-list"); //найдем весь список задач
 
-    listCards.insertBefore(slctCard, nextElement); // меняем выбранный элемент на замещающий элемент
+    try {
+      listCards.insertBefore(slctCard, nextElement); // меняем выбранный элемент на замещающий элемент
+    } catch (error) {
+      console.log(error);
+    }
   });
+};
+
+const newID = () => {
+  let id = 0;
+  do {
+    id++;
+  } while (document.getElementById(id));
+  return id;
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -93,6 +109,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAdd = document.querySelectorAll(".board-add-Control"); // ищем все кнопки добавления
   const formCard = document.querySelector(".item-enter-form"); // ищем форму для карточки
   const btnaddCard = document.querySelector(".form-data-button"); // ищем кнопку добавления карточки
+  let boards = document.querySelectorAll(".board");
+
+  for (const board of boards) {
+    // на каждую доску вешаем слушатель dragover
+    board.addEventListener("dragover", (e) => {
+      e.preventDefault();
+    });
+    board.addEventListener("drop", (e) => {
+      // на каждую доску вешаем слушатель drop
+      e.preventDefault();
+      let idElement = e.dataTransfer.getData("id"); // получаем id элемента 
+      let titleBoard = e.currentTarget.title; // получаем название доски где был drop
+      let card = document.getElementById(idElement); // получаем элемент из dom
+      let board = document.querySelector(`[title="${titleBoard}"]`); // ищем доску с названием 
+      let cardsList = board.querySelector(".cards-list"); // ищем список
+      if (cardsList) {
+        //если список есть то добавляем карточку в него
+        cardsList.append(card);
+      } else {
+        //если нет то придется создать список и добавить карточку уже в него
+        let cardsList = document.createElement("ul"); // создаем ul
+        board.appendChild(cardsList); // если списка нет то добавялем его
+        cardsList.classList.add("cards-list"); // добавляем класс
+        cardsList.append(card);
+      }
+    });
+  }
 
   for (const btn of btnAdd) {
     // на всех кнопках подписываемся на клик
